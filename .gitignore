@@ -12,6 +12,8 @@ src/resources/application.properties
 .idea/jarRepositories.xml
 .idea/compiler.xml
 .idea/libraries/
+.idea
+.idea/*
 *.iws
 *.iml
 *.ipr
