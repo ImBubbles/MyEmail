@@ -2,6 +2,7 @@ package dev.haydenholmes;
 
 import dev.haydenholmes.config.Properties;
 import dev.haydenholmes.config.PropertyReader;
+import dev.haydenholmes.network.Listener;
 
 public class MyEmail {
 
@@ -16,10 +17,11 @@ public class MyEmail {
             return;
         }
 
+        Listener listener = new Listener();
+
         //TIP Common Ports:
         // 25 - SMTP
         // 465 - SMTPS
-
 
 
 

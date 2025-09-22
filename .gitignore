@@ -5,7 +5,7 @@ build/
 !**/src/test/**/build/
 
 ### ENVIRONMENT ###
-src/resources/application.properties
+src/main/resources/application.properties
 
 ### IntelliJ IDEA ###
 .idea/modules.xml

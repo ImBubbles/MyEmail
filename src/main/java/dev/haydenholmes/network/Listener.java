@@ -1,0 +1,43 @@
+package dev.haydenholmes.network;
+
+import dev.haydenholmes.MyEmail;
+import dev.haydenholmes.log.Logger;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+public final class Listener {
+
+    private ServerSocket serverSocket = null;
+
+    public Listener() {
+        try {
+            this.serverSocket = new ServerSocket(MyEmail.properties.PORT());
+        } catch (IOException e) {
+            Logger.exception(e);
+            Logger.error("Could not start listening service");
+            return;
+        }
+        listen();
+    }
+
+    public void listen() {
+        while(true) {
+            try {
+                Logger.debug("Awaiting client connect on port " + MyEmail.properties.PORT());
+                Socket client = serverSocket.accept();
+                if(client==null) {
+                    continue;
+                }
+                Thread handler = new Thread(() -> {
+                   new ESMTPHandler(client);
+                });
+                handler.start();
+            } catch (IOException e) {
+                Logger.exception(e);
+                break;
+            }
+        }
+    }
+
+}
