@@ -1,5 +1,5 @@
 # Required values
-MYEMAIL_JKS_PATH="./keystore.jks"
+MYEMAIL_JKS_PATH="keystore.jks"
 MYEMAIL_JKS_PASSWORD="1234"
 
 # Optional values - current values reflect defaults
