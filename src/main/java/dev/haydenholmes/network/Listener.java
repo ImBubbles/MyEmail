@@ -18,6 +18,7 @@ public final class Listener {
             Logger.error("Could not start listening service");
             return;
         }
+        Logger.info("Server socket created");
         listen();
     }
 

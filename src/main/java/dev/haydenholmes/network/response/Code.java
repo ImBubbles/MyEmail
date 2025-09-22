@@ -9,6 +9,8 @@ public class Code {
         NOT_FOUND(404),
         UNAVAILABLE(421),
         INTERNAL_SERVER_ERROR(500),
+        BAD_SYNTAX(501),
+        BAD_SEQUENCE(503),
         FAILURE(554);
 
         private final int code;
@@ -44,6 +46,7 @@ public class Code {
         RCPT_TO("RCPT TO"),
         DATA("DATA"),
         QUIT("QUIT"),
+        RSET("RSET"),
         AUTH("AUTH"),
         STARTTLS("STARTTLS");
 

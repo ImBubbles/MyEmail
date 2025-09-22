@@ -5,12 +5,18 @@ import dev.haydenholmes.MyEmail;
 public class ESMTPBuilder extends ResponseBuilder {
 
     private Code.ESMTP_STATUS status = null;
+    private boolean multiline = false;
     private Code.PROTOCOL protocol = null;
     private boolean domain = false;
     private String message = "";
 
     public ESMTPBuilder setStatus(Code.ESMTP_STATUS status) {
+        return setStatus(status, false);
+    }
+
+    public ESMTPBuilder setStatus(Code.ESMTP_STATUS status, boolean multiline) {
         this.status = status;
+        this.multiline = multiline;
         return this;
     }
 
@@ -33,10 +39,15 @@ public class ESMTPBuilder extends ResponseBuilder {
     public String build() {
         SBWrapper builder = new SBWrapper();
         if(status != null) {
-            builder.append(String.valueOf(status.getCode()), true);
+            if(!multiline) {
+                builder.append(String.valueOf(status.getCode()), true);
+            } else {
+                builder.append(String.valueOf(status.getCode()), false);
+                builder.append("-");
+            }
         }
         if(domain) {
-            builder.append(MyEmail.properties.domain(), true);
+            builder.append(MyEmail.properties.DOMAIN(), true);
         }
         if(protocol != null) {
             builder.append(protocol.value(), true);
