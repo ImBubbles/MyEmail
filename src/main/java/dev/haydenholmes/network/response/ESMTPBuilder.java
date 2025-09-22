@@ -2,7 +2,7 @@ package dev.haydenholmes.network.response;
 
 import dev.haydenholmes.MyEmail;
 
-public class ESMTPBuilder extends ResponseBuilder {
+public final class ESMTPBuilder extends ResponseBuilder {
 
     private Code.ESMTP_STATUS status = null;
     private boolean multiline = false;

@@ -1,9 +1,11 @@
 package dev.haydenholmes.email;
 
-import dev.haydenholmes.network.response.ready.ReadyESMTP;
+import dev.haydenholmes.network.response.Code;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Email {
 
@@ -15,6 +17,14 @@ public class Email {
     private String sender;
     private String message;
     private final List<Recipient> recipients = new ArrayList<>();
+    private int size = 0;
+    private Code.ESMTP_BODY bodyType = null;
+    private boolean SMTPUTF8 = false;
+
+    // Content
+
+    private Map<String, String> headers = new LinkedHashMap<>();
+    private String body;
 
     public void setSender(String sender) {
         this.sender = sender;
@@ -26,6 +36,26 @@ public class Email {
 
     public void setMessage(String message) {
         this.message=message;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    public void setBodyType(Code.ESMTP_BODY bodyType) {
+        this.bodyType = bodyType;
+    }
+
+    public void setSMTPUTF8(boolean SMTPUTF8) {
+        this.SMTPUTF8 = SMTPUTF8;
+    }
+
+    public void setHeaders(Map<String, String> headers) {
+        this.headers = headers;
+    }
+
+    public void setBody(String body) {
+        this.body = body;
     }
 
     public String getSender() {
@@ -40,30 +70,25 @@ public class Email {
         return message;
     }
 
-    // NOTE- THIS IS NOT, I REPEAT, IS NOT MEANT FOR ACTUAL ADDRESS VALIDATION
-    // THIS IS SIMPLY MADE TO CHECK FOR A MALFORMED EMAIL
-    public static boolean validateEmailString(String string) {
-        // Simple check for "<", ">", and "@"
-        if(!(string.contains("<")&&string.endsWith(">")&&string.contains("@"))) {
-            return false;
-        }
-        return true;
+    public String getBody() {
+        return body;
     }
 
-    public static String trimEmail(String string) {
-        // Just in case handle if there's other stuff besides the email
-        int beginning = string.indexOf('<');
-        int end = string.indexOf('>');
-        string = string.substring(beginning, end);
+    // NOTE- THIS IS NOT, I REPEAT, IS NOT MEANT FOR ACTUAL ADDRESS VALIDATION
+    // THIS IS SIMPLY MADE TO CHECK FOR A MALFORMED EMAIL
+    public static boolean validateAddressString(String string) {
+        // Simple check for "<", ">", and "@"
+        return string.startsWith("<") && string.endsWith(">") && string.contains("@");
+    }
+
+    public static String trimAddress(String string) {
         // Basically just remove "<" and ">"
         string = string.trim();
         if(string.startsWith("<"))
-            string = string.substring(1, string.length()-1);
+            string = string.substring(1);
         if(string.endsWith(">"))
-            string = string.substring(0, string.length()-2);
+            string = string.substring(0, string.length()-1);
         return string;
     }
-
-
 
 }
