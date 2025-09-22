@@ -6,11 +6,11 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public final class Listener {
+public final class SocketListener {
 
     private ServerSocket serverSocket = null;
 
-    public Listener() {
+    public SocketListener() {
         try {
             this.serverSocket = new ServerSocket(MyEmail.properties.PORT());
         } catch (IOException e) {

@@ -3,7 +3,7 @@ package dev.haydenholmes.config;
 import dev.haydenholmes.log.Logger;
 import dev.haydenholmes.util.StringCast;
 
-public record Properties(int PORT, String DOMAIN, int SIZE, int LOG_FILTER, String JKS_PATH, String JKS_PASSWORD) {
+public record Properties(int PORT, String DOMAIN, int SIZE, int LOG_FILTER, String PKCS12_PATH, String PKCS12_PASSWORD) {
 
     public static Properties parse(PropertyReader propertyReader) {
         // PORT
@@ -30,17 +30,17 @@ public record Properties(int PORT, String DOMAIN, int SIZE, int LOG_FILTER, Stri
             return null;
         }
 
-        // JKS PATH
-        String jks = propertyReader.get(Property.MYEMAIL_JKS_PATH, "");
-        if(jks.isBlank()) {
+        // PKCS12 PATH
+        String pkcs12 = propertyReader.get(Property.MYEMAIL_PKCS12_PATH, "");
+        if(pkcs12.isBlank()) {
             Logger.error("Could not find .jks path, TLS not enabled");
         }
 
-        // JKS Password
-        String jksPass = propertyReader.get(Property.MYEMAIL_JKS_PASSWORD, "");
-        if(jksPass.isBlank()) {
+        // PKCS12 Password
+        String pkcs12Pass = propertyReader.get(Property.MYEMAIL_PKCS12_PASSWORD, "");
+        if(pkcs12Pass.isBlank()) {
             Logger.error("Password not set for JKS file TLS not enabled");
-            jks = "";
+            pkcs12 = "";
         }
 
         return new Properties(
@@ -48,8 +48,8 @@ public record Properties(int PORT, String DOMAIN, int SIZE, int LOG_FILTER, Stri
                 domain,
                 size,
                 filter,
-                jks,
-                jksPass
+                pkcs12,
+                pkcs12Pass
         );
 
     }

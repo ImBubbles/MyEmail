@@ -5,7 +5,9 @@ public class Code {
     public enum ESMTP_STATUS {
         OK(200),
         READY(220),
+        QUIT(221),
         ACKNOWLEDGE(250),
+        START_MAIL_INPUT(354),
         NOT_FOUND(404),
         UNAVAILABLE(421),
         INTERNAL_SERVER_ERROR(500),
@@ -42,8 +44,8 @@ public class Code {
     public enum ESMTP_COMMANDS {
         EHLO("EHLO"),
         HELO("HELO"),
-        MAIL_FROM("MAIL FROM"),
-        RCPT_TO("RCPT TO"),
+        MAIL_FROM("MAIL"),
+        RCPT_TO("RCPT"),
         DATA("DATA"),
         QUIT("QUIT"),
         RSET("RSET"),

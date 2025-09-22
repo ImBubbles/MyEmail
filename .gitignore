@@ -6,7 +6,8 @@ build/
 
 ### ENVIRONMENT ###
 src/main/resources/application.properties
-*.jks
+*.p12
+*.pfx
 
 ### IntelliJ IDEA ###
 .idea/modules.xml

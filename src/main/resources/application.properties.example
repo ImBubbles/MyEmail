@@ -1,9 +1,9 @@
-# Required values
-MYEMAIL_JKS_PATH="keystore.jks"
-MYEMAIL_JKS_PASSWORD="1234"
+# Required values / Blank JKS Path will disable TLS
+MYEMAIL_PKCS12_PATH=keystore.p12
+MYEMAIL_PKCS12_PASSWORD=1234
+MYEMAIL_DOMAIN=mydomain.com
 
 # Optional values - current values reflect defaults
 MYEMAIL_PORT=25
-MYEMAIL_DOMAIN="mydomain.com"
 MYEMAIL_MAX_SIZE=10485760
 MYEMAIL_LOG_FILTER=0

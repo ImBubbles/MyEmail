@@ -22,6 +22,10 @@ public final class Logger {
 
     private static int filter = -1;
 
+    public static int getFilter() {
+        return filter;
+    }
+
     public static void log(LogLevel logLevel, String message) {
         if(logLevel.getWeight() < filter) {
             return;

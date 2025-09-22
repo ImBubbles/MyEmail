@@ -56,6 +56,20 @@ public class ReadyESMTP {
                 .build();
     }
 
+    public static String startMail() {
+        return new ESMTPBuilder()
+                .setStatus(Code.ESMTP_STATUS.START_MAIL_INPUT)
+                .setMessage("Start mail input; end with <CRLF>.<CRLF>")
+                .build();
+    }
+
+    public static String bye() {
+        return new ESMTPBuilder()
+                .setStatus(Code.ESMTP_STATUS.QUIT)
+                .setMessage("Bye")
+                .build();
+    }
+
     // ADVERTISING
 
     public static String advertiseTLS() {
