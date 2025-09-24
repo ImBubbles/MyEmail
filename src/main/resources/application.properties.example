@@ -1,4 +1,4 @@
-# Required values / Blank JKS Path will disable TLS
+# Required values / Blank PKCS12 Path will disable TLS
 MYSMTP_PKCS12_PATH=keystore.p12
 MYSMTP_PKCS12_PASSWORD=1234
 MYSMTP_DOMAIN=mydomain.com
