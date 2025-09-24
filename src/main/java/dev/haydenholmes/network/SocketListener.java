@@ -1,6 +1,10 @@
 package dev.haydenholmes.network;
 
+import dev.haydenholmes.email.SMTPHandler;
+import dev.haydenholmes.email.SMTPListener;
 import dev.haydenholmes.log.Logger;
+import dev.haydenholmes.network.protocol.ready.ReadySMTPS;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -25,7 +29,10 @@ public final class SocketListener {
             Logger.exception(e);
             return;
         }
-        Logger.info("Server socket created on port " + port);
+        if(!relay)
+            Logger.info("Server created on port " + port);
+        else
+            Logger.info("Relay server created on port " + port);
         listen();
     }
 
@@ -34,8 +41,16 @@ public final class SocketListener {
             try {
                 Logger.debug("Awaiting client connect on port " + port);
                 Socket client = serverSocket.accept();
-                if(client==null) {
+                boolean allowConnection = SMTPHandler.allowConnection(client);
+                if(client==null||(!allowConnection)) {
                     continue;
+                }
+                if(relay) {
+                    // Check if address is a relay
+                    boolean relayAddress = SMTPHandler.isRelay(client);
+                    if(!relayAddress) {
+                        return;
+                    }
                 }
                 Thread handler = new Thread(() -> {
                    new ServerConnection(client, relay);

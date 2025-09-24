@@ -123,7 +123,7 @@ public final class ServerConnection {
         //out.println(ReadySMTPS.advertisePipelining());
         out.println(ReadySMTPS.advertise8BITMIME());
         //out.println(ReadySMTPS.advertiseHelp());
-        if(!MySMTP.properties.PKCS12_PATH().isEmpty())
+        if(!MySMTP.PROPERTIES.PKCS12_PATH().isEmpty())
             out.println(ReadySMTPS.advertiseTLS());
         out.println(ReadySMTPS.acknowledge());
 
@@ -136,13 +136,13 @@ public final class ServerConnection {
     private void handleStartTLS() {
 
         // Check if enabled (shouldn't be here if not but just in case)
-        if(MySMTP.properties.PKCS12_PATH().isEmpty()) {
+        if(MySMTP.PROPERTIES.PKCS12_PATH().isEmpty()) {
             out.println(ReadySMTPS.badCommand());
             return;
         }
 
         // Check if keystore file exists
-        File file = new File(MySMTP.properties.PKCS12_PATH());
+        File file = new File(MySMTP.PROPERTIES.PKCS12_PATH());
         boolean exists = file.exists() && file.isFile();
         if(!exists) {
             out.println(ReadySMTPS.badCommand());
@@ -159,7 +159,7 @@ public final class ServerConnection {
         try {
             out.println(ReadySMTPS.startTLSReady());
 
-            char[] password = MySMTP.properties.PKCS12_PASSWORD().toCharArray();
+            char[] password = MySMTP.PROPERTIES.PKCS12_PASSWORD().toCharArray();
 
             KeyStore keyStore = KeyStore.getInstance("PKCS12");
             keyStore.load(new FileInputStream(file), password);
@@ -239,17 +239,6 @@ public final class ServerConnection {
         address = Email.trimAddress(address);
 
         this.email.setSender(address);
-
-        // Check if address is a relay
-        boolean relayAddress = SMTPHandler.isRelay(address);
-        if(!relayServer && relayAddress) {
-            out.println(ReadySMTPS.relayNotAllowed());
-            return;
-        }
-        if(relayServer && !relayAddress) {
-            out.println(ReadySMTPS.relayOnly());
-            return;
-        }
 
         remainder = remainder.substring(remainder.indexOf(">")).trim();
 
@@ -443,7 +432,7 @@ public final class ServerConnection {
                 Logger.debug("Body:\n" + email.getBody());
             }
 
-            SMTPHandler.handleEmail(email);
+            SMTPHandler.email(email);
 
             out.println(ReadySMTPS.acknowledge());
             awaiting = Code.SEQUENCE_STATE.HELO;
@@ -488,7 +477,7 @@ public final class ServerConnection {
                 StringCast.fromBase64(password)
         );
 
-        boolean authed = SMTPHandler.handleAuth(apr);
+        boolean authed = SMTPHandler.auth(apr);
         if(!authed) {
             out.println(ReadySMTPS.authFailed());
             return;

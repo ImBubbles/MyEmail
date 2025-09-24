@@ -130,7 +130,7 @@ public class ReadySMTPS { // Prepared SMTP server responses
     public static String advertiseSize() {
         return new SMTPBuilder()
                 .status(Code.SMTP_STATUS.ACKNOWLEDGE, true)
-                .message("SIZE "+ MySMTP.properties.SIZE())
+                .message("SIZE "+ MySMTP.PROPERTIES.SIZE())
                 .get();
     }
 

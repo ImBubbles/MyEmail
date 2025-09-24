@@ -43,7 +43,7 @@ public final class SMTPBuilder extends SBWrapper {
     }
 
     public SMTPBuilder domain() {
-        append(MySMTP.properties.DOMAIN(), true);
+        append(MySMTP.PROPERTIES.DOMAIN(), true);
         return this;
     }
 

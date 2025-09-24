@@ -9,7 +9,7 @@ import java.io.File;
 
 public class MySMTP {
 
-    public static Properties properties;
+    public static Properties PROPERTIES;
 
     public static void main(String[] args) {
         MySMTP.init();
@@ -35,6 +35,8 @@ public class MySMTP {
             return false;
         }
 
+        PROPERTIES = properties;
+
         File file = new File(properties.PKCS12_PATH());
         Logger.debug("PKCS12 Path is " + file.getAbsolutePath());
         Logger.debug("PKCS12 existence is " + file.exists());
@@ -58,11 +60,11 @@ public class MySMTP {
     }
 
     public static SocketListener startServer() {
-        return new SocketListener(properties.PORT_SERVER());
+        return new SocketListener(PROPERTIES.PORT_SERVER());
     }
 
     public static SocketListener startRelay() {
-        return new SocketListener(properties.PORT_RELAY(), true);
+        return new SocketListener(PROPERTIES.PORT_RELAY(), true);
     }
 
 }

@@ -2,6 +2,7 @@ package dev.haydenholmes.email;
 
 import dev.haydenholmes.network.protocol.auth.AuthRequest;
 
+import java.net.Socket;
 import java.util.HashSet;
 
 public final class SMTPHandler {
@@ -17,16 +18,20 @@ public final class SMTPHandler {
         listeners.remove(emailListener);
     }
 
-    public static void handleEmail(Email email) {
+    public static void email(Email email) {
         listeners.forEach(listener -> listener.onEmail(email));
     }
 
-    public static boolean handleAuth(AuthRequest authRequest) { // returns true if any listeners return true
-        return listeners.stream().anyMatch(auth -> auth.getAuthed(authRequest));
+    public static boolean auth(AuthRequest authRequest) { // returns true if any listeners return true
+        return listeners.stream().anyMatch(listener -> listener.getAuthed(authRequest));
     }
 
-    public static boolean isRelay(String address) { // returns true if any listeners return true
-        return listeners.stream().anyMatch(auth -> auth.isRelay(address));
+    public static boolean isRelay(Socket connection) { // returns true if any listeners return true
+        return listeners.stream().anyMatch(listener -> listener.isRelay(connection));
+    }
+
+    public static boolean allowConnection(Socket connection) { // returns false if any listeners return false
+        return listeners.stream().anyMatch(listener -> !(listener.allowConnection(connection)));
     }
 
 }
