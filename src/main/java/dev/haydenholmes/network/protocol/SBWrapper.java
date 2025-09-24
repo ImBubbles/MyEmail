@@ -1,6 +1,6 @@
-package dev.haydenholmes.network.response;
+package dev.haydenholmes.network.protocol;
 
-public class SBWrapper {
+public class SBWrapper { // would extend but StringBuilder is defined as final
 
     private final StringBuilder stringBuilder;
 
@@ -23,7 +23,7 @@ public class SBWrapper {
     }
 
     public String get() {
-        return stringBuilder.toString();
+        return stringBuilder.toString().trim();
     }
 
 }

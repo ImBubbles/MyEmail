@@ -2,20 +2,31 @@ package dev.haydenholmes;
 
 import dev.haydenholmes.config.Properties;
 import dev.haydenholmes.config.PropertyReader;
-import dev.haydenholmes.email.Email;
-import dev.haydenholmes.email.EmailListener;
 import dev.haydenholmes.log.Logger;
 import dev.haydenholmes.network.SocketListener;
 
 import java.io.File;
-import java.util.HashSet;
 
 public class MyEmail {
 
     public static Properties properties;
-    private static boolean listening = false;
 
     public static void main(String[] args) {
+        MyEmail instance = new MyEmail();
+        Thread server = new Thread(instance::startServer);
+        server.start();
+        Thread relay = new Thread(instance::startRelay);
+        relay.start();
+        while(true) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                break;
+            }
+        }
+    }
+
+    public MyEmail() {
         PropertyReader pr = PropertyReader.init();
         if(pr==null)
             return;
@@ -25,19 +36,21 @@ public class MyEmail {
         }
 
         File file = new File(properties.PKCS12_PATH());
-        System.out.println(file.getAbsolutePath());
-        System.out.println(file.exists());
+        Logger.debug("PKCS12 Path is " + file.getAbsolutePath());
+        Logger.debug("PKCS12 existence is " + file.exists());
+        //System.out.println(file.getAbsolutePath());
+        //System.out.println(file.exists());
 
         // Actually reflect log filter value in properties
         Logger.setFilter(properties.LOG_FILTER());
-
-        // Start listener
-        startListener();
-
     }
 
-    public static void startListener() {
-        SocketListener listener = new SocketListener();
+    public SocketListener startServer() {
+        return new SocketListener(properties.PORT_SERVER());
+    }
+
+    public SocketListener startRelay() {
+        return new SocketListener(properties.PORT_RELAY(), true);
     }
 
 }

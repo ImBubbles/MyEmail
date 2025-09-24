@@ -1,13 +1,13 @@
 package dev.haydenholmes.email;
 
-import dev.haydenholmes.network.response.Code;
+import dev.haydenholmes.network.protocol.Code;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Email {
+public final class Email {
 
     public enum Type {
         INCOMING,
@@ -16,6 +16,7 @@ public class Email {
 
     private String sender;
     private String message;
+    private boolean authed;
     private final List<Recipient> recipients = new ArrayList<>();
     private int size = 0;
     private Code.ESMTP_BODY bodyType = null;
@@ -58,6 +59,10 @@ public class Email {
         this.body = body;
     }
 
+    public void setAuthed(boolean authed) {
+        this.authed = authed;
+    }
+
     public String getSender() {
         return sender;
     }
@@ -72,6 +77,10 @@ public class Email {
 
     public String getBody() {
         return body;
+    }
+
+    public boolean isAuthed() {
+        return authed;
     }
 
     // NOTE- THIS IS NOT, I REPEAT, IS NOT MEANT FOR ACTUAL ADDRESS VALIDATION

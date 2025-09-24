@@ -1,4 +1,4 @@
-package dev.haydenholmes.network.response;
+package dev.haydenholmes.network.protocol;
 
 import java.util.HashSet;
 import java.util.Set;

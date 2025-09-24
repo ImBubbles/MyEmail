@@ -2,10 +2,12 @@ package dev.haydenholmes.network;
 
 import dev.haydenholmes.MyEmail;
 import dev.haydenholmes.email.Email;
+import dev.haydenholmes.email.SMTPHandler;
 import dev.haydenholmes.email.Recipient;
 import dev.haydenholmes.log.Logger;
-import dev.haydenholmes.network.response.Code;
-import dev.haydenholmes.network.response.ready.ReadyESMTP;
+import dev.haydenholmes.network.protocol.Code;
+import dev.haydenholmes.network.protocol.auth.AuthPlainRequest;
+import dev.haydenholmes.network.protocol.ready.ReadySMTPS;
 import dev.haydenholmes.util.StringCast;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -16,41 +18,43 @@ import java.io.*;
 import java.net.Socket;
 import java.security.KeyStore;
 import java.security.SecureRandom;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.prefs.PreferenceChangeListener;
 import java.util.stream.Collectors;
 
-public final class ESMTPHandler {
+public final class ServerConnection {
 
     private enum State {
         HELO, // Initial state, expecting HELO or EHLO
+        AUTH,
         MAIL_FROM, // After HELO/EHLO, expecting MAIL FROM
-        RCPT_TO; // After MAIL FROM, expecting RCPT TO or another RCPT TO
-        //DATA, // Because while SMTP does not have any end identifier for the last RCPT_TO transmission
-        // server must be prepared to accept both RCPT_TO or DATA, making this state arbitrary
+        RCPT_TO, // After MAIL FROM, expecting RCPT TO or another RCPT TO
+        DATA; // Even though DATA can be sent while in the RCPT state, this is to ensure sequence is kept and no more RCPT_TO can be sent
     }
 
     private BufferedReader in;
     private PrintWriter out;
     private Socket clientSocket;
-
     private State awaiting;
-
     private Email email;
+    private final boolean relayServer;
 
-    public ESMTPHandler(Socket clientSocket) {
+    public ServerConnection(Socket clientSocket) {
+        this(clientSocket, false);
+    }
+
+    public ServerConnection(Socket clientSocket, boolean relayServer) {
 
         this.clientSocket = clientSocket;
         this.awaiting = State.HELO;
         this.email = new Email();
+        this.relayServer = relayServer;
 
         try {
             in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             out = new PrintWriter(clientSocket.getOutputStream(), true);
 
-            out.println(ReadyESMTP.acceptance());
+            out.println(ReadySMTPS.acceptance());
 
             String line;
             while((line = in.readLine()) != null) {
@@ -70,6 +74,10 @@ public final class ESMTPHandler {
                 else if(command.equals(Code.ESMTP_COMMANDS.STARTTLS.value())) {
                     handleStartTLS();
                 }
+                else if(command.equals(Code.ESMTP_COMMANDS.AUTH.value())) {
+                    if(relayServer)
+                        handleAuth();
+                }
                 else if(command.equals(Code.ESMTP_COMMANDS.RCPT_TO.value())) {
                     handleRcptTo(line);
                 }
@@ -83,7 +91,7 @@ public final class ESMTPHandler {
                     handleQuit();
                     break;
                 } else {
-                    out.println(ReadyESMTP.badCommand());
+                    out.println(ReadySMTPS.badCommand());
                 }
             }
         } catch (IOException e) {
@@ -105,36 +113,40 @@ public final class ESMTPHandler {
     private void handleEhloHelo(String line) {
         // A simple check to ensure this is the first command.
         if (awaiting != State.HELO) {
-            out.println(ReadyESMTP.badSequence());
+            out.println(ReadySMTPS.badSequence());
             return;
         }
 
         // Extract the domain name.
         String[] parts = line.split(" ");
         if (parts.length < 2) {
-            out.println(ReadyESMTP.badSyntax());
+            out.println(ReadySMTPS.badSyntax());
             return;
         }
 
         // Respond with a success code and supported ESMTP extensions.
-        out.println(ReadyESMTP.advertiseHello(parts[1]));
-        out.println(ReadyESMTP.advertiseSize());
-        out.println(ReadyESMTP.advertiseAuth());
-        out.println(ReadyESMTP.advertisePipelining());
-        out.println(ReadyESMTP.advertise8BITMIME());
-        out.println(ReadyESMTP.advertiseHelp());
+        out.println(ReadySMTPS.advertiseHello(parts[1]));
+        out.println(ReadySMTPS.advertiseSize());
+        if(relayServer)
+            out.println(ReadySMTPS.advertiseAuth());
+        out.println(ReadySMTPS.advertisePipelining());
+        out.println(ReadySMTPS.advertise8BITMIME());
+        out.println(ReadySMTPS.advertiseHelp());
         if(!MyEmail.properties.PKCS12_PATH().isEmpty())
-            out.println(ReadyESMTP.advertiseTLS());
-        out.println(ReadyESMTP.acknowledge());
+            out.println(ReadySMTPS.advertiseTLS());
+        out.println(ReadySMTPS.acknowledge());
 
-        awaiting = State.MAIL_FROM;
+        if(!relayServer)
+            awaiting = State.MAIL_FROM;
+        else
+            awaiting = State.AUTH;
     }
 
     private void handleStartTLS() {
 
         // Check if enabled (shouldn't be here if not but just in case)
         if(MyEmail.properties.PKCS12_PATH().isEmpty()) {
-            out.println(ReadyESMTP.badCommand());
+            out.println(ReadySMTPS.badCommand());
             return;
         }
 
@@ -142,19 +154,19 @@ public final class ESMTPHandler {
         File file = new File(MyEmail.properties.PKCS12_PATH());
         boolean exists = file.exists() && file.isFile();
         if(!exists) {
-            out.println(ReadyESMTP.badCommand());
+            out.println(ReadySMTPS.badCommand());
             return;
         }
 
         // Finally check sequence
 
         if(!(awaiting == State.HELO || awaiting == State.MAIL_FROM)) {
-            out.println(ReadyESMTP.badSequence());
+            out.println(ReadySMTPS.badSequence());
             return;
         }
 
         try {
-            out.println(ReadyESMTP.startTLSReady());
+            out.println(ReadySMTPS.startTLSReady());
 
             char[] password = MyEmail.properties.PKCS12_PASSWORD().toCharArray();
 
@@ -190,14 +202,14 @@ public final class ESMTPHandler {
         } catch (Exception e) {
             Logger.error("Error during TLS handshake");
             Logger.exception(e);
-            out.println(ReadyESMTP.transactionFailed());
+            out.println(ReadySMTPS.transactionFailed());
             this.awaiting = State.HELO;
         }
     }
 
     private void handleMailFrom(String line) {
         if(awaiting != State.MAIL_FROM) {
-            out.println(ReadyESMTP.badSequence());
+            out.println(ReadySMTPS.badSequence());
             return;
         }
 
@@ -207,27 +219,27 @@ public final class ESMTPHandler {
         // Because this is meant to be an API, sort of has to be kept broad/simple so sorry anyone who breaks their keyboard over this if something happens in prod
 
         if(!line.startsWith("MAIL FROM:")) {
-            out.println(ReadyESMTP.badSyntax());
+            out.println(ReadySMTPS.badSyntax());
             return;
         }
 
         String remainder = line.substring(line.indexOf(":")+1).trim();
 
         if(remainder.isEmpty()) {
-            out.println(ReadyESMTP.badSyntax());
+            out.println(ReadySMTPS.badSyntax());
             return;
         }
 
         int lt = remainder.indexOf('<');
         int gt = remainder.indexOf('>');
         if (lt == -1 || gt == -1 || gt < lt) {
-            out.println(ReadyESMTP.badSyntax());
+            out.println(ReadySMTPS.badSyntax());
             return;
         }
         String address = remainder.substring(lt, gt + 1);
 
         if(!(Email.validateAddressString(address))) {
-            out.println(ReadyESMTP.badSyntax());
+            out.println(ReadySMTPS.badSyntax());
             return;
         }
 
@@ -236,6 +248,17 @@ public final class ESMTPHandler {
         address = Email.trimAddress(address);
 
         this.email.setSender(address);
+
+        // Check if address is a relay
+        boolean relayAddress = SMTPHandler.isRelay(address);
+        if(!relayServer && relayAddress) {
+            out.println(ReadySMTPS.relayNotAllowed());
+            return;
+        }
+        if(relayServer && !relayAddress) {
+            out.println(ReadySMTPS.relayOnly());
+            return;
+        }
 
         remainder = remainder.substring(remainder.indexOf(">")).trim();
 
@@ -251,7 +274,7 @@ public final class ESMTPHandler {
                 if(p.startsWith("SIZE=")) {
                     Integer size = StringCast.toInteger(p.substring(5));
                     if(size==null) {
-                        out.println(ReadyESMTP.badSyntax());
+                        out.println(ReadySMTPS.badSyntax());
                         return;
                     }
                     email.setSize(size);
@@ -259,7 +282,7 @@ public final class ESMTPHandler {
                     String body = p.substring(5);
                     Code.ESMTP_BODY type = Code.ESMTP_BODY.parseString(body);
                     if(type==null) {
-                        out.println(ReadyESMTP.badSyntax());
+                        out.println(ReadySMTPS.badSyntax());
                         return;
                     }
                     email.setBodyType(type);
@@ -271,7 +294,7 @@ public final class ESMTPHandler {
             }
         }
 
-        out.println(ReadyESMTP.acknowledge());
+        out.println(ReadySMTPS.acknowledge());
         awaiting = State.RCPT_TO;
 
     }
@@ -279,32 +302,32 @@ public final class ESMTPHandler {
     private void handleRcptTo(String line) {
 
         if(awaiting != State.RCPT_TO) {
-            out.println(ReadyESMTP.badSequence());
+            out.println(ReadySMTPS.badSequence());
             return;
         }
 
         // Expected format is "RCPT TO:<address>" with opt parameters
         if(!line.startsWith("RCPT TO:")) {
-            out.println(ReadyESMTP.badSyntax());
+            out.println(ReadySMTPS.badSyntax());
             return;
         }
 
         String remainder = line.substring(line.indexOf(':') + 1).trim();
         if (remainder.isEmpty()) {
-            out.println(ReadyESMTP.badSyntax());
+            out.println(ReadySMTPS.badSyntax());
             return;
         }
 
         int lt = remainder.indexOf('<');
         int gt = remainder.indexOf('>');
         if (lt == -1 || gt == -1 || gt < lt) {
-            out.println(ReadyESMTP.badSyntax());
+            out.println(ReadySMTPS.badSyntax());
             return;
         }
         String address = remainder.substring(lt, gt + 1);
 
         if(!(Email.validateAddressString(address))) {
-            out.println(ReadyESMTP.badSyntax());
+            out.println(ReadySMTPS.badSyntax());
             return;
         }
 
@@ -331,19 +354,19 @@ public final class ESMTPHandler {
                 } else if (p.startsWith("ORCPT=")) {
                     String val = p.substring(6);
                     if(!val.contains(":")) {
-                        out.println(ReadyESMTP.badSyntax());
+                        out.println(ReadySMTPS.badSyntax());
                         return;
                     }
                     String[] regex = val.split(";", 2);
                     if(regex.length==1) {
-                        out.println(ReadyESMTP.badSyntax());
+                        out.println(ReadySMTPS.badSyntax());
                         return;
                     }
                     String rawORCPT = regex[0].trim();
                     orcpt = Code.ESMTP_ORCPT.parseString(rawORCPT);
                     originalEmail = Email.trimAddress(regex[1]);
                     if(orcpt==null) {
-                        out.println(ReadyESMTP.badSyntax());
+                        out.println(ReadySMTPS.badSyntax());
                         return;
                     }
                 } else {
@@ -353,23 +376,25 @@ public final class ESMTPHandler {
         }
 
         if(notifySet!=null && notifySet.isEmpty()) {
-            out.println(ReadyESMTP.badSyntax());
+            out.println(ReadySMTPS.badSyntax());
             return;
         }
 
         email.addRecipient(new Recipient(address, false, notifySet, orcpt, originalEmail));
 
-        out.println(ReadyESMTP.acknowledge());
+        out.println(ReadySMTPS.acknowledge());
 
     }
 
     private void handleData() {
         if (awaiting != State.RCPT_TO) {
-            out.println(ReadyESMTP.badSequence());
+            out.println(ReadySMTPS.badSequence());
             return;
         }
 
-        out.println(ReadyESMTP.startMail());
+        out.println(ReadySMTPS.startMail());
+
+        awaiting = State.DATA;
 
         StringBuilder rawMessage = new StringBuilder();
         Map<String, String> headers = new LinkedHashMap<>();
@@ -427,12 +452,14 @@ public final class ESMTPHandler {
                 Logger.debug("Body:\n" + email.getBody());
             }
 
-            out.println(ReadyESMTP.acknowledge());
+            SMTPHandler.handleEmail(email);
+
+            out.println(ReadySMTPS.acknowledge());
             awaiting = State.HELO;
 
         } catch (IOException e) {
             Logger.exception(e);
-            out.println(ReadyESMTP.transactionFailed());
+            out.println(ReadySMTPS.transactionFailed());
             awaiting = State.HELO;
 
             // Discard partial email content
@@ -440,14 +467,54 @@ public final class ESMTPHandler {
         }
     }
 
+    private void handleAuth() {
+
+        if(awaiting != State.AUTH) {
+            out.println(ReadySMTPS.badSequence());
+            return;
+        }
+
+        if(!(clientSocket instanceof SSLSocket)) {
+            out.println(ReadySMTPS.tlsRequired());
+            return;
+        }
+
+        String username;
+        String password;
+        try {
+            out.println(ReadySMTPS.username64());
+            username = in.readLine();
+
+            out.println(ReadySMTPS.password64());
+            password = in.readLine();
+        } catch (IOException e) {
+            Logger.exception(e);
+            return;
+        }
+
+        AuthPlainRequest apr = new AuthPlainRequest(
+                StringCast.fromBase64(username),
+                StringCast.fromBase64(password)
+        );
+
+        boolean authed = SMTPHandler.handleAuth(apr);
+        if(!authed) {
+            out.println(ReadySMTPS.authFailed());
+            return;
+        }
+
+        out.println(ReadySMTPS.authSuccess());
+
+    }
+
     private void handleRset() {
         this.awaiting = State.HELO;
         this.email = new Email();
-        out.println(ReadyESMTP.acknowledge());
+        out.println(ReadySMTPS.acknowledge());
     }
 
     private void handleQuit() {
-        out.println(ReadyESMTP.bye());
+        out.println(ReadySMTPS.bye());
     }
 
 }

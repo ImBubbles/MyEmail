@@ -3,13 +3,20 @@ package dev.haydenholmes.config;
 import dev.haydenholmes.log.Logger;
 import dev.haydenholmes.util.StringCast;
 
-public record Properties(int PORT, String DOMAIN, int SIZE, int LOG_FILTER, String PKCS12_PATH, String PKCS12_PASSWORD) {
+public record Properties(int PORT_SERVER, int PORT_RELAY, String DOMAIN, int SIZE, int LOG_FILTER, String PKCS12_PATH, String PKCS12_PASSWORD) {
 
     public static Properties parse(PropertyReader propertyReader) {
-        // PORT
-        Integer port = StringCast.toInteger(propertyReader.get(Property.MYEMAIL_PORT, "25"));
-        if(port == null) {
-            Logger.error("Invalid port");
+        // PORT SERVER
+        Integer serverPort = StringCast.toInteger(propertyReader.get(Property.MYEMAIL_PORT_SERVER, "25"));
+        if(serverPort == null) {
+            Logger.error("Invalid server port");
+            return null;
+        }
+
+        // PORT RELAY
+        Integer relayPort = StringCast.toInteger(propertyReader.get(Property.MYEMAIL_PORT_RELAY, "465"));
+        if(relayPort == null) {
+            Logger.error("Invalid relay port");
             return null;
         }
 
@@ -44,7 +51,8 @@ public record Properties(int PORT, String DOMAIN, int SIZE, int LOG_FILTER, Stri
         }
 
         return new Properties(
-                port,
+                serverPort,
+                relayPort,
                 domain,
                 size,
                 filter,
