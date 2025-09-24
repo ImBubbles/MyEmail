@@ -12,10 +12,10 @@ public class MySMTP {
     public static Properties properties;
 
     public static void main(String[] args) {
-        MySMTP instance = new MySMTP();
-        Thread server = new Thread(instance::startServer);
+        MySMTP.init();
+        Thread server = new Thread(MySMTP::startServer);
         server.start();
-        Thread relay = new Thread(instance::startRelay);
+        Thread relay = new Thread(MySMTP::startRelay);
         relay.start();
         while(true) {
             try {
@@ -26,13 +26,13 @@ public class MySMTP {
         }
     }
 
-    public MySMTP() {
-        PropertyReader pr = PropertyReader.init();
-        if(pr==null)
-            return;
-        properties = Properties.parse(pr);
+    public static boolean init() {
+        return loadProperties();
+    }
+
+    private static boolean init(Properties properties) {
         if(properties==null) {
-            return;
+            return false;
         }
 
         File file = new File(properties.PKCS12_PATH());
@@ -43,13 +43,25 @@ public class MySMTP {
 
         // Actually reflect log filter value in properties
         Logger.setFilter(properties.LOG_FILTER());
+        return true;
     }
 
-    public SocketListener startServer() {
+    private static boolean loadProperties() {
+        PropertyReader pr = PropertyReader.init();
+        if(pr==null)
+            return false;
+        return loadProperties(Properties.parse(pr));
+    }
+
+    public static boolean loadProperties(Properties properties) {
+        return init(properties);
+    }
+
+    public static SocketListener startServer() {
         return new SocketListener(properties.PORT_SERVER());
     }
 
-    public SocketListener startRelay() {
+    public static SocketListener startRelay() {
         return new SocketListener(properties.PORT_RELAY(), true);
     }
 
