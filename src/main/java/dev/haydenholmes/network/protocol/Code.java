@@ -1,11 +1,14 @@
 package dev.haydenholmes.network.protocol;
 
+import dev.haydenholmes.util.StringCast;
+
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
 public final class Code {
 
-    public enum ESMTP_STATUS {
+    public enum SMTP_STATUS {
         OK(200),
         READY(220),
         QUIT(221),
@@ -22,13 +25,40 @@ public final class Code {
 
         private final int code;
 
-        ESMTP_STATUS(int code) {
+        SMTP_STATUS(int code) {
             this.code=code;
         }
 
         public int getCode() {
             return code;
         }
+
+        public static SMTP_STATUS fromInt(int val) {
+            return Arrays.stream(SMTP_STATUS.values()).filter(smtpStatus -> smtpStatus.getCode() == val).findFirst().orElse(null);
+        }
+
+        public static SMTP_STATUS fromString(String str) {
+            int numVals = 0;
+
+            for(char ch : str.toCharArray()) {
+                boolean valid = StringCast.toInteger(String.valueOf(ch)) != null;
+                if(!valid)
+                    break;
+                numVals++;
+            }
+
+            if(numVals == 0)
+                return null;
+
+            Integer integer = StringCast.toInteger(str.substring(0, numVals));
+            if(integer == null)
+                return null;
+
+            int code = integer;
+            return fromInt(code);
+
+        }
+
     }
 
     public enum PROTOCOL {
@@ -46,11 +76,13 @@ public final class Code {
         }
     }
 
-    public enum ESMTP_COMMANDS {
+    public enum SMTP_COMMANDS {
         EHLO("EHLO"),
         HELO("HELO"),
-        MAIL_FROM("MAIL"),
-        RCPT_TO("RCPT"),
+        MAIL("MAIL"),
+        MAIL_FROM("MAIL FROM"),
+        RCPT("RCPT"),
+        RCPT_TO("RCPT TO"),
         DATA("DATA"),
         QUIT("QUIT"),
         RSET("RSET"),
@@ -59,22 +91,23 @@ public final class Code {
 
         private final String protocol;
 
-        ESMTP_COMMANDS(String protocol) {
+        SMTP_COMMANDS(String protocol) {
             this.protocol=protocol;
         }
 
         public String value() {
             return protocol;
         }
+
     }
 
-    public enum ESMTP_BODY {
+    public enum SMTP_BODY {
         _7BIT("7BIT"),
         _8BITMIME("8BITMIME");
 
         private final String value;
 
-        ESMTP_BODY(String value) {
+        SMTP_BODY(String value) {
             this.value=value;
         }
 
@@ -82,8 +115,8 @@ public final class Code {
             return value;
         }
 
-        public static ESMTP_BODY parseString(String str) {
-            for(ESMTP_BODY body : ESMTP_BODY.values()) {
+        public static SMTP_BODY parseString(String str) {
+            for(SMTP_BODY body : SMTP_BODY.values()) {
                 if(body.value.equalsIgnoreCase(str)) {
                     return body;
                 }
@@ -92,19 +125,19 @@ public final class Code {
         }
     }
 
-    public enum ESMTP_NOTIFY {
+    public enum SMTP_NOTIFY {
         SUCCESS,
         FAILURE,
         DELAY;
 
-        public static Set<ESMTP_NOTIFY> parseString(String str) {
-            Set<ESMTP_NOTIFY> result = new HashSet<>();
+        public static Set<SMTP_NOTIFY> parseString(String str) {
+            Set<SMTP_NOTIFY> result = new HashSet<>();
             String[] regex = str.split(",");
             regex:
             for(String r : regex) {
                 r = r.trim();
                 notif:
-                    for(ESMTP_NOTIFY notify : ESMTP_NOTIFY.values()) {
+                    for(SMTP_NOTIFY notify : SMTP_NOTIFY.values()) {
                         if(notify.name().equalsIgnoreCase(r)) {
                             result.add(notify);
                             continue regex;
@@ -113,23 +146,24 @@ public final class Code {
             }
             return result;
         }
+
     }
 
-    public enum ESMTP_ORCPT {
+    public enum SMTP_ORCPT {
         RFC822,
         X_TEXT("X-TEXT");
 
         private final String value;
 
-        ESMTP_ORCPT() {
+        SMTP_ORCPT() {
             this.value=name();
         }
-        ESMTP_ORCPT(String value) {
+        SMTP_ORCPT(String value) {
             this.value=value;
         }
 
-        public static ESMTP_ORCPT parseString(String str) {
-            for(ESMTP_ORCPT orcpt : ESMTP_ORCPT.values()) {
+        public static SMTP_ORCPT parseString(String str) {
+            for(SMTP_ORCPT orcpt : SMTP_ORCPT.values()) {
                 if(orcpt.name().equalsIgnoreCase(str)) {
                     return orcpt;
                 }
@@ -151,6 +185,15 @@ public final class Code {
             }
             return null;
         }
+    }
+
+    public enum SEQUENCE_STATE {
+        DEAD,
+        HELO, // Initial state, expecting HELO or EHLO
+        AUTH,
+        MAIL_FROM, // After HELO/EHLO, expecting MAIL FROM
+        RCPT_TO, // After MAIL FROM, expecting RCPT TO or another RCPT TO
+        DATA; // Even though DATA can be sent while in the RCPT state, this is to ensure sequence is kept and no more RCPT_TO can be sent
     }
 
 }

@@ -4,17 +4,33 @@ import dev.haydenholmes.MyEmail;
 
 public final class SMTPBuilder extends SBWrapper {
 
-    public SMTPBuilder status(Code.ESMTP_STATUS status) {
+    public SMTPBuilder status(Code.SMTP_STATUS status) {
         return status(status, false);
     }
 
-    public SMTPBuilder status(Code.ESMTP_STATUS status, boolean multiline) {
+    public SMTPBuilder status(Code.SMTP_STATUS status, boolean multiline) {
         if(status!=null) {
             if(!multiline) {
                 append(String.valueOf(status.getCode()), true);
             } else {
                 append(String.valueOf(status.getCode()), false);
                 append("-");
+            }
+        }
+        return this;
+    }
+
+    public SMTPBuilder command(Code.SMTP_COMMANDS command) {
+        return command(command, false);
+    }
+
+    public SMTPBuilder command(Code.SMTP_COMMANDS command, boolean semicolon) {
+        if(command!=null) {
+            if(!semicolon)
+                append(command.value(), true);
+            else {
+                append(command.value(), false);
+                append(":", false);
             }
         }
         return this;

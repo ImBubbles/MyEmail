@@ -19,7 +19,7 @@ public final class Email {
     private boolean authed;
     private final List<Recipient> recipients = new ArrayList<>();
     private int size = 0;
-    private Code.ESMTP_BODY bodyType = null;
+    private Code.SMTP_BODY bodyType = null;
     private boolean SMTPUTF8 = false;
 
     // Content
@@ -43,7 +43,7 @@ public final class Email {
         this.size = size;
     }
 
-    public void setBodyType(Code.ESMTP_BODY bodyType) {
+    public void setBodyType(Code.SMTP_BODY bodyType) {
         this.bodyType = bodyType;
     }
 
@@ -86,8 +86,8 @@ public final class Email {
     // NOTE- THIS IS NOT, I REPEAT, IS NOT MEANT FOR ACTUAL ADDRESS VALIDATION
     // THIS IS SIMPLY MADE TO CHECK FOR A MALFORMED EMAIL
     public static boolean validateAddressString(String string) {
-        // Simple check for "<", ">", and "@"
-        return string.startsWith("<") && string.endsWith(">") && string.contains("@");
+        // Simple check for "@"
+        return string.contains("@");
     }
 
     public static String trimAddress(String string) {

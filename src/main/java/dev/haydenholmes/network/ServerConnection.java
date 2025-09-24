@@ -19,23 +19,14 @@ import java.net.Socket;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.prefs.PreferenceChangeListener;
 import java.util.stream.Collectors;
 
 public final class ServerConnection {
 
-    private enum State {
-        HELO, // Initial state, expecting HELO or EHLO
-        AUTH,
-        MAIL_FROM, // After HELO/EHLO, expecting MAIL FROM
-        RCPT_TO, // After MAIL FROM, expecting RCPT TO or another RCPT TO
-        DATA; // Even though DATA can be sent while in the RCPT state, this is to ensure sequence is kept and no more RCPT_TO can be sent
-    }
-
     private BufferedReader in;
     private PrintWriter out;
     private Socket clientSocket;
-    private State awaiting;
+    private Code.SEQUENCE_STATE awaiting;
     private Email email;
     private final boolean relayServer;
 
@@ -46,7 +37,7 @@ public final class ServerConnection {
     public ServerConnection(Socket clientSocket, boolean relayServer) {
 
         this.clientSocket = clientSocket;
-        this.awaiting = State.HELO;
+        this.awaiting = Code.SEQUENCE_STATE.HELO;
         this.email = new Email();
         this.relayServer = relayServer;
 
@@ -65,29 +56,29 @@ public final class ServerConnection {
                 }
                 String command = line.toUpperCase(Locale.ROOT).split(" ")[0];
                 Logger.debug("Trying to test command " + command);
-                if(command.equals(Code.ESMTP_COMMANDS.EHLO.value())) {
+                if(command.equals(Code.SMTP_COMMANDS.EHLO.value())) {
                     handleEhloHelo(line);
                 }
-                else if(command.equals(Code.ESMTP_COMMANDS.MAIL_FROM.value())) {
+                else if(command.equals(Code.SMTP_COMMANDS.MAIL.value())) {
                     handleMailFrom(line);
                 }
-                else if(command.equals(Code.ESMTP_COMMANDS.STARTTLS.value())) {
+                else if(command.equals(Code.SMTP_COMMANDS.STARTTLS.value())) {
                     handleStartTLS();
                 }
-                else if(command.equals(Code.ESMTP_COMMANDS.AUTH.value())) {
+                else if(command.equals(Code.SMTP_COMMANDS.AUTH.value())) {
                     if(relayServer)
                         handleAuth();
                 }
-                else if(command.equals(Code.ESMTP_COMMANDS.RCPT_TO.value())) {
+                else if(command.equals(Code.SMTP_COMMANDS.RCPT.value())) {
                     handleRcptTo(line);
                 }
-                else if(command.equals(Code.ESMTP_COMMANDS.DATA.value())) {
+                else if(command.equals(Code.SMTP_COMMANDS.DATA.value())) {
                     handleData();
                 }
-                else if(command.equals(Code.ESMTP_COMMANDS.RSET.value())) {
+                else if(command.equals(Code.SMTP_COMMANDS.RSET.value())) {
                     handleRset();
                 }
-                else if(command.equals(Code.ESMTP_COMMANDS.QUIT.value())) {
+                else if(command.equals(Code.SMTP_COMMANDS.QUIT.value())) {
                     handleQuit();
                     break;
                 } else {
@@ -112,7 +103,7 @@ public final class ServerConnection {
 
     private void handleEhloHelo(String line) {
         // A simple check to ensure this is the first command.
-        if (awaiting != State.HELO) {
+        if (awaiting != Code.SEQUENCE_STATE.HELO) {
             out.println(ReadySMTPS.badSequence());
             return;
         }
@@ -137,9 +128,9 @@ public final class ServerConnection {
         out.println(ReadySMTPS.acknowledge());
 
         if(!relayServer)
-            awaiting = State.MAIL_FROM;
+            awaiting = Code.SEQUENCE_STATE.MAIL_FROM;
         else
-            awaiting = State.AUTH;
+            awaiting = Code.SEQUENCE_STATE.AUTH;
     }
 
     private void handleStartTLS() {
@@ -160,7 +151,7 @@ public final class ServerConnection {
 
         // Finally check sequence
 
-        if(!(awaiting == State.HELO || awaiting == State.MAIL_FROM)) {
+        if(!(awaiting == Code.SEQUENCE_STATE.HELO || awaiting == Code.SEQUENCE_STATE.MAIL_FROM)) {
             out.println(ReadySMTPS.badSequence());
             return;
         }
@@ -198,17 +189,17 @@ public final class ServerConnection {
             this.out = new PrintWriter(sslSocket.getOutputStream(), true);
             this.clientSocket = sslSocket;
 
-            this.awaiting = State.HELO;
+            this.awaiting = Code.SEQUENCE_STATE.HELO;
         } catch (Exception e) {
             Logger.error("Error during TLS handshake");
             Logger.exception(e);
             out.println(ReadySMTPS.transactionFailed());
-            this.awaiting = State.HELO;
+            this.awaiting = Code.SEQUENCE_STATE.HELO;
         }
     }
 
     private void handleMailFrom(String line) {
-        if(awaiting != State.MAIL_FROM) {
+        if(awaiting != Code.SEQUENCE_STATE.MAIL_FROM) {
             out.println(ReadySMTPS.badSequence());
             return;
         }
@@ -280,7 +271,7 @@ public final class ServerConnection {
                     email.setSize(size);
                 } else if(p.startsWith("BODY=")) {
                     String body = p.substring(5);
-                    Code.ESMTP_BODY type = Code.ESMTP_BODY.parseString(body);
+                    Code.SMTP_BODY type = Code.SMTP_BODY.parseString(body);
                     if(type==null) {
                         out.println(ReadySMTPS.badSyntax());
                         return;
@@ -295,13 +286,13 @@ public final class ServerConnection {
         }
 
         out.println(ReadySMTPS.acknowledge());
-        awaiting = State.RCPT_TO;
+        awaiting = Code.SEQUENCE_STATE.RCPT_TO;
 
     }
 
     private void handleRcptTo(String line) {
 
-        if(awaiting != State.RCPT_TO) {
+        if(awaiting != Code.SEQUENCE_STATE.RCPT_TO) {
             out.println(ReadySMTPS.badSequence());
             return;
         }
@@ -335,8 +326,8 @@ public final class ServerConnection {
 
         remainder = remainder.substring(remainder.indexOf(">")).trim();
 
-        Set<Code.ESMTP_NOTIFY> notifySet = null;
-        Code.ESMTP_ORCPT orcpt = null;
+        Set<Code.SMTP_NOTIFY> notifySet = null;
+        Code.SMTP_ORCPT orcpt = null;
         String originalEmail = "";
         if(!remainder.isEmpty()) {
             String[] params = remainder.split("\\s+");
@@ -350,7 +341,7 @@ public final class ServerConnection {
 
                 // Handle known parameters
                 if (p.startsWith("NOTIFY=")) {
-                    notifySet = Code.ESMTP_NOTIFY.parseString(p.substring(7));
+                    notifySet = Code.SMTP_NOTIFY.parseString(p.substring(7));
                 } else if (p.startsWith("ORCPT=")) {
                     String val = p.substring(6);
                     if(!val.contains(":")) {
@@ -363,7 +354,7 @@ public final class ServerConnection {
                         return;
                     }
                     String rawORCPT = regex[0].trim();
-                    orcpt = Code.ESMTP_ORCPT.parseString(rawORCPT);
+                    orcpt = Code.SMTP_ORCPT.parseString(rawORCPT);
                     originalEmail = Email.trimAddress(regex[1]);
                     if(orcpt==null) {
                         out.println(ReadySMTPS.badSyntax());
@@ -387,14 +378,14 @@ public final class ServerConnection {
     }
 
     private void handleData() {
-        if (awaiting != State.RCPT_TO) {
+        if (awaiting != Code.SEQUENCE_STATE.RCPT_TO) {
             out.println(ReadySMTPS.badSequence());
             return;
         }
 
         out.println(ReadySMTPS.startMail());
 
-        awaiting = State.DATA;
+        awaiting = Code.SEQUENCE_STATE.DATA;
 
         StringBuilder rawMessage = new StringBuilder();
         Map<String, String> headers = new LinkedHashMap<>();
@@ -455,12 +446,12 @@ public final class ServerConnection {
             SMTPHandler.handleEmail(email);
 
             out.println(ReadySMTPS.acknowledge());
-            awaiting = State.HELO;
+            awaiting = Code.SEQUENCE_STATE.HELO;
 
         } catch (IOException e) {
             Logger.exception(e);
             out.println(ReadySMTPS.transactionFailed());
-            awaiting = State.HELO;
+            awaiting = Code.SEQUENCE_STATE.HELO;
 
             // Discard partial email content
             this.email = new Email();
@@ -469,7 +460,7 @@ public final class ServerConnection {
 
     private void handleAuth() {
 
-        if(awaiting != State.AUTH) {
+        if(awaiting != Code.SEQUENCE_STATE.AUTH) {
             out.println(ReadySMTPS.badSequence());
             return;
         }
@@ -508,7 +499,7 @@ public final class ServerConnection {
     }
 
     private void handleRset() {
-        this.awaiting = State.HELO;
+        this.awaiting = Code.SEQUENCE_STATE.HELO;
         this.email = new Email();
         out.println(ReadySMTPS.acknowledge());
     }
