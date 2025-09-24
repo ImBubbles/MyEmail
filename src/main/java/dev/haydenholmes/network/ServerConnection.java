@@ -129,9 +129,9 @@ public final class ServerConnection {
         out.println(ReadySMTPS.advertiseSize());
         if(relayServer)
             out.println(ReadySMTPS.advertiseAuth());
-        out.println(ReadySMTPS.advertisePipelining());
+        //out.println(ReadySMTPS.advertisePipelining());
         out.println(ReadySMTPS.advertise8BITMIME());
-        out.println(ReadySMTPS.advertiseHelp());
+        //out.println(ReadySMTPS.advertiseHelp());
         if(!MyEmail.properties.PKCS12_PATH().isEmpty())
             out.println(ReadySMTPS.advertiseTLS());
         out.println(ReadySMTPS.acknowledge());
