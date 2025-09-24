@@ -1,6 +1,6 @@
 package dev.haydenholmes.network.protocol;
 
-import dev.haydenholmes.MyEmail;
+import dev.haydenholmes.MySMTP;
 
 public final class SMTPBuilder extends SBWrapper {
 
@@ -43,7 +43,7 @@ public final class SMTPBuilder extends SBWrapper {
     }
 
     public SMTPBuilder domain() {
-        append(MyEmail.properties.DOMAIN(), true);
+        append(MySMTP.properties.DOMAIN(), true);
         return this;
     }
 

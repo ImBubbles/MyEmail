@@ -1,6 +1,6 @@
 package dev.haydenholmes.network;
 
-import dev.haydenholmes.MyEmail;
+import dev.haydenholmes.MySMTP;
 import dev.haydenholmes.email.Email;
 import dev.haydenholmes.email.SMTPHandler;
 import dev.haydenholmes.email.Recipient;
@@ -123,7 +123,7 @@ public final class ServerConnection {
         //out.println(ReadySMTPS.advertisePipelining());
         out.println(ReadySMTPS.advertise8BITMIME());
         //out.println(ReadySMTPS.advertiseHelp());
-        if(!MyEmail.properties.PKCS12_PATH().isEmpty())
+        if(!MySMTP.properties.PKCS12_PATH().isEmpty())
             out.println(ReadySMTPS.advertiseTLS());
         out.println(ReadySMTPS.acknowledge());
 
@@ -136,13 +136,13 @@ public final class ServerConnection {
     private void handleStartTLS() {
 
         // Check if enabled (shouldn't be here if not but just in case)
-        if(MyEmail.properties.PKCS12_PATH().isEmpty()) {
+        if(MySMTP.properties.PKCS12_PATH().isEmpty()) {
             out.println(ReadySMTPS.badCommand());
             return;
         }
 
         // Check if keystore file exists
-        File file = new File(MyEmail.properties.PKCS12_PATH());
+        File file = new File(MySMTP.properties.PKCS12_PATH());
         boolean exists = file.exists() && file.isFile();
         if(!exists) {
             out.println(ReadySMTPS.badCommand());
@@ -159,7 +159,7 @@ public final class ServerConnection {
         try {
             out.println(ReadySMTPS.startTLSReady());
 
-            char[] password = MyEmail.properties.PKCS12_PASSWORD().toCharArray();
+            char[] password = MySMTP.properties.PKCS12_PASSWORD().toCharArray();
 
             KeyStore keyStore = KeyStore.getInstance("PKCS12");
             keyStore.load(new FileInputStream(file), password);

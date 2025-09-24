@@ -1,6 +1,6 @@
 package dev.haydenholmes.network.protocol.ready;
 
-import dev.haydenholmes.MyEmail;
+import dev.haydenholmes.MySMTP;
 import dev.haydenholmes.network.protocol.Code;
 import dev.haydenholmes.network.protocol.SMTPBuilder;
 import dev.haydenholmes.util.StringCast;
@@ -130,7 +130,7 @@ public class ReadySMTPS { // Prepared SMTP server responses
     public static String advertiseSize() {
         return new SMTPBuilder()
                 .status(Code.SMTP_STATUS.ACKNOWLEDGE, true)
-                .message("SIZE "+MyEmail.properties.SIZE())
+                .message("SIZE "+ MySMTP.properties.SIZE())
                 .get();
     }
 

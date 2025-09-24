@@ -7,12 +7,12 @@ import dev.haydenholmes.network.SocketListener;
 
 import java.io.File;
 
-public class MyEmail {
+public class MySMTP {
 
     public static Properties properties;
 
     public static void main(String[] args) {
-        MyEmail instance = new MyEmail();
+        MySMTP instance = new MySMTP();
         Thread server = new Thread(instance::startServer);
         server.start();
         Thread relay = new Thread(instance::startRelay);
@@ -26,7 +26,7 @@ public class MyEmail {
         }
     }
 
-    public MyEmail() {
+    public MySMTP() {
         PropertyReader pr = PropertyReader.init();
         if(pr==null)
             return;
